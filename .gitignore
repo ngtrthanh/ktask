@@ -1,4 +1,4 @@
-tasks/*.done.md
+tasks/**/*.done.md
 examples/tasks/*.done.md
 demo/tasks/
 demo/project/.venv/

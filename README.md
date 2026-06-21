@@ -157,6 +157,12 @@ kagent coder "implement the rate limiter in src/middleware/"
 kagent-turbo tester "t1" "t2" "t3"     # 3 test tasks in parallel
 ```
 
+### Job monitoring
+
+```bash
+kstats                      # show job history stats from ~/.ktask_jobs.jsonl
+```
+
 ### Routing and budget
 
 ```bash
@@ -346,6 +352,9 @@ kturbo-t0 \
 # Run the autonomous task loop
 ktask-new "add request logging middleware to the API" ./tasks/
 ktask-loop ./tasks/
+
+# Check job stats
+kstats
 
 # Check budget used
 kbudget

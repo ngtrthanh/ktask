@@ -50,6 +50,13 @@ function _ktask_extract() {
     awk '/^## Result/{exit} {print}' "$1"
 }
 
+# _ktask_log_job task_file tier model credits_used duration_seconds exit_code
+function _ktask_log_job() {
+    local ts; ts=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+    printf '{"timestamp":"%s","task_file":"%s","tier":"%s","model":"%s","credits_used":%s,"duration_seconds":%s,"exit_code":%s}\n' \
+        "$ts" "$1" "$2" "$3" "$4" "$5" "$6" >> "${HOME}/.ktask_jobs.jsonl"
+}
+
 # ── Budget ────────────────────────────────────────────────────────────────────
 
 # kbudget — show session credit usage and monthly reference
@@ -67,6 +74,72 @@ function kbudget() {
     printf '    claude-haiku-4.5  0.40x  →   ~5,000 tasks/month\n'
     printf '    claude-sonnet-4.6 1.30x  →   ~1,538 tasks/month\n'
     printf '    claude-opus-4.8   2.20x  →     ~909 tasks/month\n\n'
+}
+
+# kstats — show job history stats from ~/.ktask_jobs.jsonl
+function kstats() {
+    local log="${HOME}/.ktask_jobs.jsonl"
+    if [ ! -s "$log" ]; then
+        echo "No job history found at $log"; return 0
+    fi
+
+    awk '
+    function jval(line, key,    pat, val) {
+        pat = "\"" key "\":[[:space:]]*"
+        if (match(line, pat "[0-9.]+")) {
+            val = substr(line, RSTART + length(key) + 3, RLENGTH - length(key) - 3)
+            gsub(/[^0-9.]/, "", val); return val
+        }
+        if (match(line, pat "\"[^\"]*\"")) {
+            val = substr(line, RSTART + length(key) + 4, RLENGTH - length(key) - 5)
+            return val
+        }
+        return ""
+    }
+    {
+        ts    = jval($0, "timestamp")
+        tf    = jval($0, "task_file")
+        tier  = jval($0, "tier")
+        model = jval($0, "model")
+        cr    = jval($0, "credits_used") + 0
+        dur   = jval($0, "duration_seconds") + 0
+        ec    = jval($0, "exit_code")
+
+        total += cr; jobs++
+        mcr[model] += cr; mcnt[model]++
+        tcr[tier]  += cr; tcnt[tier]++
+
+        # keep ring buffer of last 10
+        idx = NR % 10
+        rts[idx]=ts; rtf[idx]=tf; rtier[idx]=tier; rmodel[idx]=model
+        rcr[idx]=cr; rdur[idx]=dur; rec[idx]=ec
+        last10_start = (NR > 10) ? (NR - 9) : 1
+    }
+    END {
+        printf "\n  Total credits used : %.4f  (%d jobs)\n\n", total, jobs
+
+        printf "  By model:\n"
+        for (m in mcr) printf "    %-30s  %6.4f cr  %d jobs\n", m, mcr[m], mcnt[m]
+
+        printf "\n  By tier:\n"
+        for (t in tcr) printf "    %-4s  %6.4f cr  %d jobs\n", t, tcr[t], tcnt[t]
+
+        printf "\n  Last 10 jobs:\n"
+        printf "  %-20s %-30s %-4s %-20s %8s %6s %4s\n",
+            "timestamp","task_file","tier","model","credits","dur(s)","exit"
+        printf "  %s\n", "────────────────────────────────────────────────────────────────────────────────────────────────────"
+        n = (jobs < 10) ? jobs : 10
+        for (i = 0; i < n; i++) {
+            idx = (NR - n + 1 + i) % 10
+            tf_short = rtf[idx]; sub(/.*\//, "", tf_short)
+            printf "  %-20s %-30s %-4s %-20s %8.4f %6d %4s\n",
+                substr(rts[idx],1,19), substr(tf_short,1,30),
+                rtier[idx], substr(rmodel[idx],1,20),
+                rcr[idx], rdur[idx], rec[idx]
+        }
+        printf "\n"
+    }
+    ' "$log"
 }
 
 # kreset-budget — reset session accumulator
@@ -270,7 +343,9 @@ function ktask-run() {
     local tier; tier=$(_ktask_tier "$content")
     echo ">> ktask-run: $(basename "$file")  [tier: $tier]"
 
-    local result=""
+    local result="" exit_code=0
+    local start_time; start_time=$(date +%s)
+
     case "$tier" in
         T3)
             local title; title=$(grep -m1 '^#' "$file" | sed 's/^#* *//')
@@ -279,21 +354,34 @@ function ktask-run() {
             return 2
             ;;
         T2)
-            result=$(kagent coder "$content")
+            result=$(kagent coder "$content"); exit_code=$?
             ;;
         T1)
             if echo "${content,,}" | grep -qP "(test|spec)"; then
-                result=$(kagent tester "$content")
+                result=$(kagent tester "$content"); exit_code=$?
             elif echo "${content,,}" | grep -qP "(doc|readme|comment)"; then
-                result=$(kagent doc-writer "$content")
+                result=$(kagent doc-writer "$content"); exit_code=$?
             else
-                result=$(kq "$content")
+                result=$(kq "$content"); exit_code=$?
             fi
             ;;
         T0)
-            result=$(kturbo-t0 "$content")
+            result=$(kturbo-t0 "$content"); exit_code=$?
             ;;
     esac
+
+    local end_time; end_time=$(date +%s)
+    local duration=$(( end_time - start_time ))
+    local credits; credits=$(echo "$result" | grep -oP 'Credits: \K[0-9.]+' | tail -1)
+    credits="${credits:-0}"
+    local model
+    case "$tier" in
+        T2) model="coder-agent" ;;
+        T1) model="qwen3-coder-next" ;;
+        T0) model="deepseek-3.2" ;;
+        *)  model="unknown" ;;
+    esac
+    _ktask_log_job "$file" "$tier" "$model" "$credits" "$duration" "$exit_code"
 
     {
         printf '\n## Result\n\n'
