@@ -1,0 +1,12 @@
+{
+  "name": "researcher",
+  "description": "Lightweight research agent for web search, URL fetching, and summarization — cheap and fast, ideal as a subagent worker",
+  "prompt": "You are a focused research agent. Given a query, search the web, fetch relevant URLs, and return a concise factual summary. No fluff. Cite sources.",
+  "tools": [
+    "read",
+    "grep",
+    "glob"
+  ],
+  "includeMcpJson": false,
+  "model": "claude-haiku-4.5"
+}

@@ -1,0 +1,21 @@
+{
+  "name": "orchestrator",
+  "description": "Master orchestrator that decomposes tasks and delegates to parallel subagents for maximum throughput",
+  "prompt": "You are a high-throughput orchestrator. When given a task, first decompose it into independent subtasks, then use use_subagent to run up to 4 in parallel. Chain dependent tasks in sequential use_subagent calls. Synthesize all results into a final cohesive answer. Prefer parallelism over sequential execution wherever task dependencies allow.",
+  "tools": [
+    "read",
+    "write",
+    "shell",
+    "grep",
+    "glob",
+    "delegate"
+  ],
+  "toolsSettings": {
+    "subagent": {
+      "availableAgents": ["*"],
+      "trustedAgents": ["*"]
+    }
+  },
+  "includeMcpJson": true,
+  "model": null
+}

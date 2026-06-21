@@ -1,0 +1,4 @@
+tasks/*.done.md
+examples/tasks/*.done.md
+.kiro_session_budget
+*.tmp
