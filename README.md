@@ -33,7 +33,7 @@ You
              └─▶ kiro worker 4  ──┘
 ```
 
-**kiro-cli** is a separate AI coding agent with its own 2000 credits/month budget. By routing tasks to kiro workers:
+**kiro-cli** is a separate AI coding agent with its own credits/month budget (2000 for Pro+). By routing tasks to kiro workers:
 
 - kiro burns kiro credits — Claude Code capacity is preserved
 - Up to 4 workers run simultaneously — true parallelism
