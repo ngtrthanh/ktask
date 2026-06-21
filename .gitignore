@@ -1,5 +1,9 @@
 tasks/*.done.md
 examples/tasks/*.done.md
 demo/tasks/
+demo/project/.venv/
+demo/project/__pycache__/
 .kiro_session_budget
 *.tmp
+__pycache__/
+*.pyc
