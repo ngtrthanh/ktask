@@ -1,5 +1,8 @@
 # ktask
 
+[![GitHub](https://img.shields.io/badge/GitHub-ngtrthanh%2Fktask-181717?logo=github&logoColor=white)](https://github.com/ngtrthanh/ktask)
+[![Stars](https://img.shields.io/github/stars/ngtrthanh/ktask?style=flat&color=yellow)](https://github.com/ngtrthanh/ktask/stargazers)
+
 **Autonomous development pipeline using Claude Code + kiro-cli.**
 
 Claude Code handles judgment. kiro-cli workers handle execution. They share the workload, run in parallel, and bill to separate quotas.
