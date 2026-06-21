@@ -1,4 +1,5 @@
 tasks/*.done.md
 examples/tasks/*.done.md
+demo/tasks/
 .kiro_session_budget
 *.tmp
